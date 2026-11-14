@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <title>Portfolio inbox | Kamal Javed</title>
+  <link rel="stylesheet" href="/admin.css" />
+  <script src="/admin.js" defer></script>
+</head>
+<body>
+  <main class="admin-shell">
+    <header class="admin-top"><a class="brand" href="/">KJ<span>.</span></a><span class="eyebrow">PRIVATE PROJECT INBOX</span><button id="logout" class="quiet-button" hidden>Sign out ↗</button></header>
+    <section id="login-panel" class="login-panel">
+      <p class="eyebrow">ADMIN ACCESS</p>
+      <h1>Good work<br /><em>starts here.</em></h1>
+      <p class="muted">Sign in to read the project notes submitted through your portfolio.</p>
+      <form id="login-form" class="stack-form">
+        <label>Username<input name="username" autocomplete="username" required /></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required /></label>
+        <button class="primary-button" type="submit">OPEN INBOX <span>↗</span></button>
+        <p id="login-message" class="form-message" aria-live="polite"></p>
+      </form>
+    </section>
+    <section id="inbox-panel" hidden>
+      <div class="inbox-heading"><div><p class="eyebrow">KAMAL JAVED / ENQUIRIES</p><h1>Project<br /><em>inbox.</em></h1></div><span id="message-count" class="count">0 NOTES</span></div>
+      <div id="inquiries" class="inquiries" aria-live="polite"></div>
+    </section>
+  </main>
+</body>
+</html>
