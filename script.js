@@ -1,5 +1,7 @@
 const canvas = document.querySelector('#sequence');
 const context = canvas.getContext('2d', { alpha: false });
+const portraitLayer = document.createElement('canvas');
+const portraitContext = portraitLayer.getContext('2d');
 const header = document.querySelector('.topbar');
 const menuButton = document.querySelector('.menu-toggle');
 const frameCount = 240;
@@ -102,20 +104,55 @@ function renderFrame(force = false) {
   }
   if (!image?.complete || !image.naturalWidth || !canvasWidth || !canvasHeight) return;
 
-  const scale = Math.max(canvasWidth / image.naturalWidth, canvasHeight / image.naturalHeight);
-  const imageWidth = image.naturalWidth * scale;
-  const imageHeight = image.naturalHeight * scale;
   context.clearRect(0, 0, canvasWidth, canvasHeight);
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = 'high';
-  context.drawImage(image, (canvasWidth - imageWidth) / 2, (canvasHeight - imageHeight) / 2, imageWidth, imageHeight);
+  drawFramedImage(image);
   if (lowerReady && upperReady && upperIndex !== lowerIndex && blend > 0.001) {
     context.globalAlpha = blend;
-    context.drawImage(nextImage, (canvasWidth - imageWidth) / 2, (canvasHeight - imageHeight) / 2, imageWidth, imageHeight);
+    drawFramedImage(nextImage);
     context.globalAlpha = 1;
   }
   drawWordmark();
   lastRenderedPosition = position;
+}
+
+function drawFramedImage(image) {
+  const coverScale = Math.max(canvasWidth / image.naturalWidth, canvasHeight / image.naturalHeight);
+  const portraitViewport = canvasHeight / canvasWidth > 1.1;
+  if (!portraitViewport) {
+    const width = image.naturalWidth * coverScale;
+    const height = image.naturalHeight * coverScale;
+    context.drawImage(image, (canvasWidth - width) / 2, (canvasHeight - height) / 2, width, height);
+    return;
+  }
+
+  const coverWidth = image.naturalWidth * coverScale;
+  const coverHeight = image.naturalHeight * coverScale;
+  context.save();
+  context.filter = `blur(${Math.round(canvasWidth * 0.035)}px) brightness(.38)`;
+  context.drawImage(image, (canvasWidth - coverWidth) / 2, (canvasHeight - coverHeight) / 2, coverWidth, coverHeight);
+  context.restore();
+
+  const portraitScale = canvasWidth <= 600 ? 2 : 1.7;
+  const fitScale = Math.min(canvasWidth / image.naturalWidth, canvasHeight / image.naturalHeight) * portraitScale;
+  const width = image.naturalWidth * fitScale;
+  const height = image.naturalHeight * fitScale;
+  const portraitCenterY = canvasHeight * (canvasWidth <= 600 ? 0.66 : 0.43);
+  const top = portraitCenterY - height / 2;
+  portraitContext.clearRect(0, 0, canvasWidth, canvasHeight);
+  portraitContext.drawImage(image, (canvasWidth - width) / 2, top, width, height);
+  const edgeFade = Math.min(height * 0.14, canvasHeight * 0.08);
+  const mask = portraitContext.createLinearGradient(0, top, 0, top + height);
+  mask.addColorStop(0, 'rgba(0,0,0,0)');
+  mask.addColorStop(edgeFade / height, 'rgba(0,0,0,1)');
+  mask.addColorStop(1 - edgeFade / height, 'rgba(0,0,0,1)');
+  mask.addColorStop(1, 'rgba(0,0,0,0)');
+  portraitContext.globalCompositeOperation = 'destination-in';
+  portraitContext.fillStyle = mask;
+  portraitContext.fillRect(0, top, canvasWidth, height);
+  portraitContext.globalCompositeOperation = 'source-over';
+  context.drawImage(portraitLayer, 0, 0);
 }
 
 function drawWordmark() {
@@ -144,6 +181,8 @@ function resizeCanvas() {
   if (canvas.width !== canvasWidth || canvas.height !== canvasHeight) {
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
+    portraitLayer.width = canvasWidth;
+    portraitLayer.height = canvasHeight;
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
     lastRenderedPosition = -1;
