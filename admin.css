@@ -24,6 +24,8 @@ h1 em { font-family: Georgia, serif; font-weight: 400; text-transform: none; }
 .inquiry { display: grid; grid-template-columns: 1fr auto; gap: 6px 24px; padding: 24px 0; border-bottom: 1px solid var(--line); }
 .inquiry h2 { margin: 0; font-size: 21px; }
 .inquiry a { color: var(--red); overflow-wrap: anywhere; }
+.delivery-status { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; letter-spacing: .1em; }
+.delivery-status.is-sent { color: #a9df9a; }
 .inquiry time, .inquiry-status { color: var(--muted); font-size: 12px; }
 .inquiry p { grid-column: 1 / -1; margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .inquiry select { align-self: start; border: 1px solid var(--line); background: #090708; color: var(--paper); padding: 9px; font: inherit; }

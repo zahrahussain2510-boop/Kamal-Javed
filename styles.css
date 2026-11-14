@@ -129,9 +129,10 @@ h1 em, h2 em { color: var(--red); text-shadow: 0 0 20px rgba(255,23,73,.22); fon
 .project-form label { display: grid; gap: 6px; color: #c6bebb; font: 14px var(--mono); letter-spacing: .05em; }
 .project-form input, .project-form textarea { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 0; outline: none; background: rgba(0,0,0,.72); color: var(--paper); font: 15px/1.5 var(--sans); resize: vertical; }
 .project-form input:focus, .project-form textarea:focus { border-color: var(--red); box-shadow: 0 0 0 1px rgba(255,23,73,.22); }
-.project-form .contact-cta { width: fit-content; margin-top: 0; cursor: pointer; background: transparent; }
+.project-form .contact-cta { width: fit-content; margin-top: 0; padding: 13px 0; border: 0; border-bottom: 1px solid var(--red); cursor: pointer; background: transparent; }
 .project-form .contact-cta:disabled { opacity: .65; cursor: wait; }
 .project-form-status { min-height: 22px; margin: 0; color: var(--paper); font-size: 14px; line-height: 1.5; }
+.email-fallback { color: var(--red); text-underline-offset: 3px; }
 .site-footer { position: relative; z-index: 1; min-height: 70px; padding: 0 5.4vw; display: flex; align-items: center; justify-content: space-between; gap: 18px; background: rgba(6,5,6,.83); color: #aaa19d; font: 14px var(--mono); letter-spacing: .1em; }
 .site-footer .wordmark { color: var(--paper); font: 800 18px var(--sans); letter-spacing: -.1em; }
 @media (max-width: 850px) {

@@ -2,6 +2,8 @@ import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import { extname, resolve, relative, isAbsolute, sep } from 'node:path';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { connect as tlsConnect } from 'node:tls';
+import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
@@ -85,6 +87,76 @@ async function saveInquiries(inquiries) {
   return saving;
 }
 
+async function emailInquiry(inquiry) {
+  const host = process.env.SMTP_HOST;
+  const username = process.env.SMTP_USER;
+  const password = process.env.SMTP_PASS;
+  const recipient = process.env.CONTACT_EMAIL || 'kamaljaved78@gmail.com';
+  if (!host || !username || !password) return false;
+
+  const port = Number(process.env.SMTP_PORT || 465);
+  const socket = tlsConnect({ host, port, servername: host });
+  socket.setTimeout(15_000, () => socket.destroy(new Error('Email server timed out.')));
+  const lines = createInterface({ input: socket, crlfDelay: Infinity });
+  const lineIterator = lines[Symbol.asyncIterator]();
+  const response = async () => {
+    const result = [];
+    let line;
+    do {
+      const next = await lineIterator.next();
+      if (next.done) throw new Error('Email server closed the connection.');
+      line = next.value;
+      result.push(line);
+    } while (/^\d{3}-/.test(line));
+    return { code: Number(line.slice(0, 3)), text: result.join('\n') };
+  };
+  const command = async (value, expected) => {
+    socket.write(`${value}\r\n`);
+    const answer = await response();
+    if (!expected.includes(answer.code)) throw new Error(`Email server rejected a delivery step (${answer.code}).`);
+    return answer;
+  };
+
+  try {
+    await new Promise((resolveConnection, rejectConnection) => {
+      socket.once('secureConnect', resolveConnection);
+      socket.once('error', rejectConnection);
+    });
+    const greeting = await response();
+    if (greeting.code !== 220) throw new Error('Email server did not accept the connection.');
+    await command('EHLO portfolio.local', [250]);
+    await command('AUTH LOGIN', [334]);
+    await command(Buffer.from(username).toString('base64'), [334]);
+    await command(Buffer.from(password.replace(/\s/g, '')).toString('base64'), [235]);
+    const sender = process.env.SMTP_FROM || username;
+    await command(`MAIL FROM:<${sender}>`, [250]);
+    await command(`RCPT TO:<${recipient}>`, [250, 251]);
+    await command('DATA', [354]);
+
+    const message = [
+      `From: Kamal Javed Website <${sender}>`,
+      `To: <${recipient}>`,
+      `Reply-To: <${inquiry.email}>`,
+      'Subject: New portfolio project enquiry',
+      'MIME-Version: 1.0',
+      'Content-Type: text/plain; charset=UTF-8',
+      'Content-Transfer-Encoding: 8bit',
+      '',
+      `Name: ${inquiry.name}`,
+      `Email: ${inquiry.email}`,
+      `Received: ${inquiry.createdAt}`,
+      '',
+      inquiry.message,
+    ].join('\r\n').split('\r\n').map(line => line.startsWith('.') ? `.${line}` : line).join('\r\n');
+    await command(`${message}\r\n.`, [250]);
+    await command('QUIT', [221]);
+    return true;
+  } finally {
+    lines.close();
+    socket.end();
+  }
+}
+
 const server = createServer(async (request, response) => {
   let pathname;
   try { pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname); }
@@ -101,9 +173,21 @@ const server = createServer(async (request, response) => {
         return;
       }
       const inquiries = await readInquiries();
-      inquiries.unshift({ id: randomBytes(12).toString('hex'), name, email, message, createdAt: new Date().toISOString(), status: 'new' });
+      const inquiry = { id: randomBytes(12).toString('hex'), name, email, message, createdAt: new Date().toISOString(), status: 'new', emailSent: false };
+      inquiries.unshift(inquiry);
       await saveInquiries(inquiries);
-      sendJson(response, 201, { ok: true, message: 'Your project note has been received. Thank you.' });
+      try {
+        const delivered = await emailInquiry(inquiry);
+        if (!delivered) {
+          sendJson(response, 503, { saved: true, error: 'Your note is saved in the portfolio inbox. Email delivery is not connected yet.' });
+          return;
+        }
+        inquiry.emailSent = true;
+        await saveInquiries(inquiries);
+        sendJson(response, 201, { ok: true, message: 'Your project note was sent to Kamal. Thank you.' });
+      } catch {
+        sendJson(response, 502, { saved: true, error: 'Your note is safely saved, but email delivery failed. Please use the email link below.' });
+      }
     } catch (error) { sendJson(response, error.status || 400, { error: error.status === 413 ? 'Message is too large.' : 'Could not save your message.' }); }
     return;
   }

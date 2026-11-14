@@ -37,7 +37,10 @@ async function loadInquiries() {
       const email = document.createElement('a');
       email.href = `mailto:${item.email}`;
       email.textContent = item.email;
-      identity.append(title, email);
+      const delivery = document.createElement('span');
+      delivery.className = `delivery-status${item.emailSent ? ' is-sent' : ''}`;
+      delivery.textContent = item.emailSent ? 'EMAIL SENT' : 'SAVED IN INBOX';
+      identity.append(title, email, delivery);
       const date = document.createElement('time');
       date.dateTime = item.createdAt;
       date.textContent = new Date(item.createdAt).toLocaleString();
